@@ -36,10 +36,6 @@ namespace OZZ {
         Impl->Initialize();
     }
 
-    void InputSubsystem::HandleInput() {
-        Impl->HandleInput();
-    }
-
     void InputSubsystem::Shutdown() {
         Impl->Shutdown();
     }
@@ -52,10 +48,12 @@ namespace OZZ {
             if (Mapping.Chord.ReceiveEvent(Event.Key, Event.State)) {
                 switch (Mapping.Chord.CurrentState) {
                     case EKeyState::KeyPressed:
-                        Mapping.Callbacks.OnPressed();
+                        if (Mapping.Callbacks.OnPressed)
+                            Mapping.Callbacks.OnPressed();
                         break;
                     case EKeyState::KeyReleased:
-                        Mapping.Callbacks.OnReleased();
+                        if (Mapping.Callbacks.OnReleased)
+                            Mapping.Callbacks.OnReleased();
                         break;
                     default:
                         break;

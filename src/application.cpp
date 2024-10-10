@@ -34,6 +34,8 @@ namespace OZZ {
                 continue;
             }
 
+            // TODO: Most of the stuff in this loop can be extracted to a "Game" class
+            //  -- this would allow for re-using the framework for other projects
             StartFrame();
             Render();
             EndFrame();
@@ -116,9 +118,6 @@ namespace OZZ {
                                 },
                                 .OnReleased = []() {
                                     std::cout << "Escape Released" << std::endl;
-                                },
-                                .OnHeld = []() {
-                                    std::cout << "Escape Held" << std::endl;
                                 }
                         }
                 });
@@ -185,7 +184,6 @@ namespace OZZ {
             glfwMakeContextCurrent(backup_current_context);
         }
 
-        // Draw ImGUI demo window
         // swap buffers
         glfwSwapBuffers(Window);
     }

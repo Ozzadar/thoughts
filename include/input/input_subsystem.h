@@ -46,7 +46,6 @@ namespace OZZ {
     struct ActionCallbacks {
         std::function<void()> OnPressed;
         std::function<void()> OnReleased;
-        std::function<void()> OnHeld;
     };
 
     struct InputMapping {
@@ -81,7 +80,6 @@ namespace OZZ {
         InputSubsystem();
 
         void Initialize();
-        void HandleInput();
         void Shutdown();
 
     private:
