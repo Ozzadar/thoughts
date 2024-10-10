@@ -22,10 +22,10 @@ namespace OZZ {
     struct InputChord {
         std::vector<EKey> Keys;
         bool bIsSequence { false };
+        std::chrono::duration<long long, std::milli> TimeBetweenKeys { 1000 };
 
         // These next values are not meant to be used directly
         std::vector<EKeyState> States;
-        std::chrono::duration<long long, std::milli> TimeBetweenKeys { 1000 };
         EKeyState CurrentState { EKeyState::KeyReleased };
         int CurrentKeyIndex { 0 };
         std::chrono::time_point<std::chrono::high_resolution_clock> LastKeyTime;
