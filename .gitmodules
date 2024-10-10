@@ -1,0 +1,9 @@
+[submodule "vendor/imgui/imguilib"]
+	path = vendor/imgui/imguilib
+	url = https://github.com/ocornut/imgui
+[submodule "vendor/glfw"]
+	path = vendor/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "vendor/wil"]
+	path = vendor/wil
+	url = https://github.com/microsoft/wil.git

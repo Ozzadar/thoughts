@@ -1,0 +1,161 @@
+//
+// Created by ozzadar on 2024-10-09.
+//
+
+#include <cassert>
+#include "input/input_subsystem.h"
+
+// if we're on windows, include the windows implementation
+#ifdef _WIN32
+#include "impl/input_subsystem_impl_windows.h"
+#endif
+
+namespace OZZ {
+    std::shared_ptr<InputSubsystem> InputSubsystem::Instance { nullptr };
+
+    InputSubsystem::InputSubsystem() {
+        assert(!Impl && "InputSubsystem already initialized");
+
+#ifdef _WIN32
+        // if we're on windows, create the windows implementation
+        Impl = std::make_unique<InputSubsystemWindowsImpl>();
+#else
+        assert(false && "No input subsystem implementation for this platform");
+#endif
+    }
+
+    std::shared_ptr<InputSubsystem> InputSubsystem::Get() {
+        if (!Instance) {
+            Instance = std::shared_ptr<InputSubsystem>(new InputSubsystem());
+        }
+
+        return Instance;
+    }
+
+    void InputSubsystem::Initialize() {
+        Impl->Initialize();
+    }
+
+    void InputSubsystem::HandleInput() {
+        Impl->HandleInput();
+    }
+
+    void InputSubsystem::Shutdown() {
+        Impl->Shutdown();
+    }
+
+    void InputSubsystem::NotifyKeyboardEvent(const KeyboardEvent &Event) {
+        KeyStates[static_cast<size_t>(Event.Key)] = Event.State;
+
+        // Notify all mappings
+        for (auto& Mapping : Mappings) {
+            if (Mapping.Chord.ReceiveEvent(Event.Key, Event.State)) {
+                switch (Mapping.Chord.CurrentState) {
+                    case EKeyState::KeyPressed:
+                        Mapping.Callbacks.OnPressed();
+                        break;
+                    case EKeyState::KeyReleased:
+                        Mapping.Callbacks.OnReleased();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    void InputSubsystem::RegisterInputMapping(InputMapping &&Mapping) {
+        std::string Action = Mapping.Action;
+        bool bFound = false;
+        for (auto& ExistingMapping : Mappings) {
+            if (ExistingMapping.Action == Action) {
+                ExistingMapping = Mapping;
+                bFound = true;
+                break;
+            }
+        }
+
+        if (!bFound) {
+            Mappings.push_back(Mapping);
+        }
+    }
+
+    void InputSubsystem::UnregisterInputMapping(const std::string &Action) {
+        Mappings.erase(std::remove_if(Mappings.begin(), Mappings.end(), [&Action](const InputMapping& Mapping) {
+            return Mapping.Action == Action;
+        }), Mappings.end());
+    }
+
+    bool InputChord::ReceiveEvent(EKey Key, EKeyState State) {
+        EnsureInitialized();
+
+        bool bChangedState = false;
+        for (size_t i = 0; i < Keys.size(); i++) {
+            if (Keys[i] == Key) {
+                States[i] = State;
+                bChangedState = true;
+            }
+        }
+
+        if (!bIsSequence) {
+            // Calculate new state
+            bool bAllPressed = true;
+            for (const auto &KeyState: States) {
+                if (KeyState == EKeyState::KeyReleased) {
+                    bAllPressed = false;
+                    break;
+                }
+            }
+
+            EKeyState NewState{bAllPressed ? EKeyState::KeyPressed : EKeyState::KeyReleased};
+
+            if (NewState != CurrentState) {
+                CurrentState = NewState;
+                return true;
+            }
+        } else {
+            auto CurrentTime = std::chrono::high_resolution_clock::now();
+            bool bProgressSequence =
+                    (CurrentKeyIndex == 0 || CurrentTime - LastKeyTime < TimeBetweenKeys)
+                    && bChangedState
+                    && State == EKeyState::KeyPressed
+                    && Keys[CurrentKeyIndex] == Key;
+
+            // if you screw up, you want to be able to start over at any point.
+            if (!bProgressSequence && State == EKeyState::KeyPressed && Key == Keys[0]) {
+                std::cout << "Resetting sequence" << std::endl;
+                CurrentKeyIndex = 0;
+                bProgressSequence = true;
+            }
+
+            if (bProgressSequence) {
+                if (CurrentKeyIndex == Keys.size() - 1) {
+                    CurrentState = EKeyState::KeyPressed;
+                    CurrentKeyIndex = 0;
+                    LastKeyTime = CurrentTime;
+                    return true;
+                }
+
+                CurrentKeyIndex++;
+                LastKeyTime = CurrentTime;
+            } else if (State == EKeyState::KeyPressed){
+                CurrentKeyIndex = 0;
+            }
+
+            CurrentState = EKeyState::KeyReleased;
+        }
+
+        return false;
+    }
+
+    void InputChord::EnsureInitialized() {
+        if (!bInitialized) {
+            States.resize(Keys.size());
+            for (auto &State: States) {
+                State = EKeyState::KeyReleased;
+            }
+            LastKeyTime = std::chrono::high_resolution_clock::now();
+            bInitialized = true;
+        }
+    }
+} // OZZ
