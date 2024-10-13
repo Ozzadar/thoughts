@@ -11,10 +11,8 @@
 #endif
 
 namespace OZZ {
-    std::shared_ptr<InputSubsystem> InputSubsystem::Instance { nullptr };
-
     InputSubsystem::InputSubsystem() {
-        assert(!Impl && "InputSubsystem already initialized");
+        assert(!Impl && "Input already initialized");
 
 #ifdef _WIN32
         // if we're on windows, create the windows implementation
@@ -22,14 +20,6 @@ namespace OZZ {
 #else
         assert(false && "No input subsystem implementation for this platform");
 #endif
-    }
-
-    std::shared_ptr<InputSubsystem> InputSubsystem::Get() {
-        if (!Instance) {
-            Instance = std::shared_ptr<InputSubsystem>(new InputSubsystem());
-        }
-
-        return Instance;
     }
 
     void InputSubsystem::Initialize() {

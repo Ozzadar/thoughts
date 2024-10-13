@@ -4,10 +4,12 @@
 
 #pragma once
 
-#include "GLFW/glfw3.h"
-#include "imgui.h"
 #include <array>
 #include <memory>
+
+#include "windows/window_manager.h"
+#include "renderers/overlay/overlay.h"
+#include "renderers/tool/tool_renderer.h"
 
 namespace OZZ {
 
@@ -20,17 +22,14 @@ namespace OZZ {
 
     private:
         void Initialize();
-        void HandleInput();
         void Render();
-        void StartFrame();
-        void EndFrame();
         void Shutdown();
     private:
-       GLFWwindow* Window { nullptr };
        bool bRunning { false };
-       ImGuiIO* io;
 
-       std::shared_ptr<class InputSubsystem> InputSubsystem;
+       std::unique_ptr<WindowManager> pWindowManager;
+       std::shared_ptr<Overlay> OverlayRenderer;
+       std::shared_ptr<ToolRenderer> pToolRenderer;
     };
 
 } // OZZ

@@ -6,9 +6,10 @@
 #include <backends/imgui_impl_opengl3.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <memory>
 #include <iostream>
-#include <input/input_subsystem.h>
 
+#include <input/input_subsystem.h>
 #include "application.h"
 #include "input/glfw_keys.h"
 
@@ -26,89 +27,76 @@ namespace OZZ {
         bRunning = true;
 
         while (bRunning) {
-            glfwPollEvents();
-
-            HandleInput();
-            if (glfwWindowShouldClose(Window)) {
-                bRunning = false;
-                continue;
-            }
-
-            // TODO: Most of the stuff in this loop can be extracted to a "Game" class
-            //  -- this would allow for re-using the framework for other projects
-            StartFrame();
-            Render();
-            EndFrame();
-        }
+             if (pWindowManager->Update()) {
+                 bRunning = false;
+             }
+         }
     }
 
     void Application::Initialize() {
-        if (!glfwInit()) {
-            std::cerr << "Failed to initialize GLFW" << std::endl;
-            return;
+        // Initialize Window Manager
+        pWindowManager = std::make_unique<WindowManager>();
+        OverlayRenderer = std::make_shared<Overlay>();
+        pToolRenderer = std::make_shared<ToolRenderer>();
+
+        // We want the window to span the entire screen, on all screens
+        int totalWidth = 0;
+        int maxHeight = 0;
+        int monitorCount = 0;
+        int minPosX = 0;
+        int minPosY = 0;
+        GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+
+        for (int i = 0; i < monitorCount; i++) {
+            const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]);
+            totalWidth += mode->width;
+            maxHeight = std::max(maxHeight, mode->height);
+
+            int posX, posY;
+            glfwGetMonitorPos(monitors[i], &posX, &posY);
+
+            minPosX = std::min(minPosX, posX);
+            minPosY = std::min(minPosY, posY);
         }
 
-        // window hints
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+        // Create first window
+        WindowParams Params = {
+                .key = 0,
+                .Title = "Overlay",
+                .Width = totalWidth,
+                .Height = maxHeight,
+                .bAlwaysOnTop = true,
+                .bInputPassthrough = true,
+                .bTransparentFramebuffer = true,
+                .bDecorated = false,
+                .Mode = EWindowMode::Windowed,
+                .OpenGLVersion = {4, 6},
+                .bEnableImGUI = false
+        };
 
-        // Create the window
-        Window = glfwCreateWindow(800, 600, "Hello, World!", nullptr, nullptr);
-        if (!Window) {
-            std::cerr << "Failed to create window" << std::endl;
-            glfwTerminate();
-            return;
-        }
+        auto* pWindow = pWindowManager->CreateWindow(std::move(Params));
+        pWindow->SetWindowPosition({minPosX, minPosY});
 
-        // Make the window's context current
-        glfwMakeContextCurrent(Window);
 
-        // start glad
-        if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
-            std::cerr << "Failed to initialize GLAD" << std::endl;
-            glfwTerminate();
-            return;
-        }
+        pWindow->SetRenderer(OverlayRenderer);
 
-        glfwSetWindowUserPointer(Window, this);
-        glfwSetKeyCallback(Window, [](GLFWwindow *Window, int Key, int Scancode, int Action, int Mods) {
-            auto App = static_cast<Application *>(glfwGetWindowUserPointer(Window));
-            if (App->InputSubsystem) {
-                if (Action == GLFW_REPEAT) return; // Repeat is not needed.
-                GLFWKeyState glfwKeyState(Action);
-                App->InputSubsystem->NotifyKeyboardEvent({GLFWKey(Key), glfwKeyState});
-            }
-        });
+        Params = {
+                .key = 1,
+                .Title = "Other window",
+                .Width = 800,
+                .Height = 600,
+                .bAlwaysOnTop = false,
+                .bInputPassthrough = false,
+                .bTransparentFramebuffer = false,
+                .bDecorated = true,
+                .Mode = EWindowMode::Windowed,
+                .OpenGLVersion = {4, 6},
+                .bEnableImGUI = true
+        };
 
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        io = &ImGui::GetIO();
-        (void) io;
-        io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-        io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
-        io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-
-        // Setup Dear ImGui style
-        ImGui::StyleColorsDark();
-
-        // Setup Platform/Renderer bindings
-        ImGui_ImplGlfw_InitForOpenGL(Window, true);
-        ImGui_ImplOpenGL3_Init();
-
-        // get version info
-        std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
-        // renderer string
-        std::cout << "OpenGL Renderer: " << glGetString(GL_RENDERER) << std::endl;
-
-        // enable depth test
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LESS);
-
+        pWindow = pWindowManager->CreateWindow(std::move(Params));
         // Register global hotkeys
-        InputSubsystem = InputSubsystem::Get();
-        InputSubsystem->RegisterInputMapping(
+        pWindow->GetInput()->RegisterInputMapping(
                 {
                         .Action = "Quit",
                         .Chord = InputChord{.Keys = std::vector<EKey>{EKey::LControl, EKey::LAlt, EKey::X}},
@@ -122,7 +110,7 @@ namespace OZZ {
                         }
                 });
 
-        InputSubsystem->RegisterInputMapping(
+        pWindow->GetInput()->RegisterInputMapping(
                 {
                         .Action = "Konami",
                         .Chord = {
@@ -139,58 +127,16 @@ namespace OZZ {
                                 }
                         }
                 });
+
+        pWindow->SetRenderer(pToolRenderer);
     }
 
     void Application::Shutdown() {
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
-
-        io = nullptr;
-        Window = nullptr;
-
-        // cleanup
-        glfwDestroyWindow(Window);
-        glfwTerminate();
+        pWindowManager.reset();
     }
 
     void Application::Render() {
-        ImGui::ShowDemoWindow();
-
-        ImGui::Render();
-
-        // clear the screen
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     }
 
-    void Application::StartFrame() {
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-    }
-
-    void Application::EndFrame() {
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        // Update and Render additional Platform Windows
-        // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
-        //  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
-        if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-            GLFWwindow *backup_current_context = glfwGetCurrentContext();
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-            glfwMakeContextCurrent(backup_current_context);
-        }
-
-        // swap buffers
-        glfwSwapBuffers(Window);
-    }
-
-    void Application::HandleInput() {
-        if (InputSubsystem->GetKeyState(EKey::Escape) == EKeyState::KeyPressed) {
-            bRunning = false;
-        }
-    }
 } // OZZ

@@ -60,12 +60,14 @@ namespace OZZ {
         virtual void Initialize() = 0;
         virtual void HandleInput() = 0;
         virtual void Shutdown() = 0;
+
+    public:
+        virtual ~IInputSubsystem() = default;
     };
 
     class InputSubsystem {
     public:
-        static std::shared_ptr<InputSubsystem> Get();
-
+        InputSubsystem();
         void RegisterInputMapping(InputMapping&& Mapping);
         void UnregisterInputMapping(const std::string& Action);
 
@@ -77,15 +79,13 @@ namespace OZZ {
 
         ~InputSubsystem() = default;
     private:
-        InputSubsystem();
 
         void Initialize();
         void Shutdown();
 
     private:
-        static std::shared_ptr<InputSubsystem> Instance;
-        std::array<EKeyState, static_cast<size_t>(EKey::KeyCount)> KeyStates;
-        std::unique_ptr<IInputSubsystem> Impl;
-        std::vector<InputMapping> Mappings;
+        std::array<EKeyState, static_cast<size_t>(EKey::KeyCount)> KeyStates {};
+        std::unique_ptr<IInputSubsystem> Impl { nullptr };
+        std::vector<InputMapping> Mappings {};
     };
 } // OZZ

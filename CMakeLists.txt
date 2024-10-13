@@ -12,6 +12,8 @@ add_subdirectory(vendor/glad)
 add_subdirectory(vendor/glfw)
 add_subdirectory(vendor/imgui)
 add_subdirectory(vendor/wil)
+add_subdirectory(vendor/spdlog)
+add_subdirectory(vendor/glm)
 
 file (GLOB_RECURSE SOURCES src/*.cpp)
 
@@ -21,7 +23,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE include/)
 
 # if on windows, link against wil
 if (WIN32)
+    add_compile_definitions(NOMINMAX)
+    add_compile_definitions(GLFW_EXPOSE_NATIVE_WIN32)
     target_link_libraries(${PROJECT_NAME} WIL)
 endif()
 
-target_link_libraries(${PROJECT_NAME} imguilib glfw glad)
+target_link_libraries(${PROJECT_NAME} imguilib glfw glad spdlog::spdlog glm)
