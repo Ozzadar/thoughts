@@ -12,6 +12,7 @@
 #include <input/input_subsystem.h>
 #include "application.h"
 #include "input/glfw_keys.h"
+#include "spdlog/spdlog.h"
 
 using namespace std::chrono_literals;
 namespace OZZ {
@@ -105,7 +106,7 @@ namespace OZZ {
                                     bRunning = false;
                                 },
                                 .OnReleased = []() {
-                                    std::cout << "Escape Released" << std::endl;
+                                    spdlog::info("Quit hotkey released");
                                 }
                         }
                 });
@@ -123,7 +124,7 @@ namespace OZZ {
                         },
                         .Callbacks = {
                                 .OnPressed = []() {
-                                    std::cout << "Konami Code Entered" << std::endl;
+                                    spdlog::info("Konami Code Entered");
                                 }
                         }
                 });

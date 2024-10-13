@@ -111,7 +111,6 @@ namespace OZZ {
 
             // if you screw up, you want to be able to start over at any point.
             if (!bProgressSequence && State == EKeyState::KeyPressed && Key == Keys[0]) {
-                std::cout << "Resetting sequence" << std::endl;
                 CurrentKeyIndex = 0;
                 bProgressSequence = true;
             }

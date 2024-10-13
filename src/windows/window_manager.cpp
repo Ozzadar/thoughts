@@ -3,6 +3,7 @@
 //
 
 #include "windows/window_manager.h"
+#include "spdlog/spdlog.h"
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
@@ -51,7 +52,7 @@ void OZZ::WindowManager::DestroyWindow(uint32_t key) {
 
 void OZZ::WindowManager::Initialize() {
     if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
+        spdlog::error("Failed to initialize GLFW");
         return;
     }
 

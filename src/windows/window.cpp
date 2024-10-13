@@ -72,7 +72,7 @@ namespace OZZ {
 
         pWindow = glfwCreateWindow(Params.Width, Params.Height, Params.Title.c_str(), pMonitor, nullptr);
         if (!pWindow) {
-            std::cerr << "Failed to create window | Key: " << std::endl;
+            spdlog::error("Failed to create window | Key: {}", Params.key);
             glfwTerminate();
             return;
         }
@@ -108,7 +108,7 @@ namespace OZZ {
 
         // start glad
         if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
-            std::cerr << "Failed to initialize GLAD" << std::endl;
+            spdlog::error("Failed to initialize GLAD");
             glfwTerminate();
             return;
         }

@@ -18,7 +18,6 @@ namespace OZZ {
     }
 
     void Overlay::Render() {
-        spdlog::info("Overlay::Render()");
         // clear the screen
         glClearColor(0.1f, 0.1f, 0.7f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
