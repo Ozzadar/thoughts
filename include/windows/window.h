@@ -1,74 +1,44 @@
 //
-// Created by ozzadar on 2024-10-12.
+// Created by ozzadar on 2024-10-14.
 //
 
 #pragma once
-#include <cstdint>
-#include <string>
-#include <memory>
-
-#include <graphics.h>
-#include "input/input_subsystem.h"
-#include "renderers/renderer.h"
 #include <glm/glm.hpp>
-#include <utility>
+#include <memory>
+#include <platform.h>
+#include <functional>
 
-class GLFWwindow;
+#include "windows/window_params.h"
+#include "renderers/renderer.h"
+#include "input/input_subsystem.h"
+
 namespace OZZ {
-    enum class EWindowMode {
-        Windowed,
-        Fullscreen,
-        Borderless
-    };
-
-    struct WindowParams {
-        uint32_t key;
-        std::string Title;
-        int Width;
-        int Height;
-        bool bAlwaysOnTop;
-        bool bInputPassthrough;
-        bool bTransparentFramebuffer;
-        bool bDecorated;
-        EWindowMode Mode;
-        std::pair<int, int> OpenGLVersion;
-        bool bEnableImGUI;
-    };
-
-    class Window {
+    class IWindow {
     public:
-        explicit Window(WindowParams &&InParams);
-        ~Window();
-
         /**
-         * @brief Updates the window
-         * @return true if the application should close
+         * All IWindows need a constructor that takes WindowParams,
+         * I can't force it through an interface, but I can make it a requirement in the documentation
+         * There's definitely a more elegant way to do this, but I don't feel like thinking about it right now
          */
-        bool Update();
+        explicit IWindow(const WindowParams& InParams = {}) {};
 
-        void MakeContextCurrent() const;
-        void SetWindowPosition(const glm::vec2& Position) const;
-        void SetUserPointer(void* Pointer);
-        void SetRenderer(std::shared_ptr<IRenderer> InRenderer) { pRenderer = std::move(InRenderer); }
+        virtual ~IWindow() = default;
 
-        [[nodiscard]] void* GetUserPointer() const { return UserPointer; }
-        [[nodiscard]] GLFWwindow* GetWindow() const { return pWindow; }
-        [[nodiscard]] InputSubsystem* GetInput() const { return Input.get(); }
-    private:
-        void Initialize();
-        void Shutdown();
+        virtual bool Update() = 0;
 
-        void FrameStart();
-        void FrameEnd();
+        virtual void MakeContextCurrent() const = 0;
 
-    private:
-        WindowParams Params;
-        std::unique_ptr<InputSubsystem> Input;
-        std::shared_ptr<IRenderer> pRenderer;
+        virtual void SetWindowPosition(const glm::ivec2 &Position) const = 0;
 
-        GLFWwindow* pWindow { nullptr };
+        virtual void SetUserPointer(void *Pointer) = 0;
 
-        void* UserPointer { nullptr };
-        ImGuiIO *io { nullptr };
+        virtual void SetRenderer(std::shared_ptr<IRenderer> InRenderer) = 0;
+
+        [[nodiscard]] virtual void *GetUserPointer() const = 0;
+
+        [[nodiscard]] virtual InputSubsystem *GetInput() const = 0;
+
+        std::function<void()> OnClosed;
     };
-} // OZZ
+}
+

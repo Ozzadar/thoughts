@@ -17,6 +17,7 @@ namespace OZZ {
 #ifdef _WIN32
         // if we're on windows, create the windows implementation
         Impl = std::make_unique<InputSubsystemWindowsImpl>();
+        Impl->Initialize();
 #else
         assert(false && "No input subsystem implementation for this platform");
 #endif

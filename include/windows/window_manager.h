@@ -7,17 +7,22 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <mutex>
+#include "window.h"
+#include "window_params.h"
 
-#include "windows/window.h"
 
 namespace OZZ {
+    constexpr uint32_t MAIN_WINDOW_KEY = 0;
+
     class WindowManager {
     public:
         WindowManager();
         ~WindowManager();
 
-        Window* GetWindow(uint32_t key);
-        Window* CreateWindow(WindowParams&& Params);
+        uint16_t NumWindows() { return Windows.size(); };
+        IWindow* GetWindow(uint32_t key);
+        IWindow* NewWindow(OZZ::WindowParams &&Params);
         void DestroyWindow(uint32_t key);
 
         /**
@@ -34,6 +39,10 @@ namespace OZZ {
         void Initialize();
         void Shutdown();
     private:
-        std::vector<std::pair<uint32_t, std::unique_ptr<Window>>> Windows;
+        std::shared_ptr<IWindow> pMainWindow { nullptr };
+        std::vector<std::pair<uint32_t, std::unique_ptr<IWindow>>> Windows {};
+
+        std::mutex WindowsMutex;
+        std::vector<uint32_t> WindowsToDestroy {};
     };
 } // OZZ

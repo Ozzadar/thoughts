@@ -6,7 +6,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "graphics.h"
+#include "platform.h"
 
 namespace OZZ {
     void Overlay::Initialize() {
@@ -18,8 +18,12 @@ namespace OZZ {
     }
 
     void Overlay::Render() {
-        // clear the screen
-        glClearColor(0.1f, 0.1f, 0.7f, 0.0f);
+#ifdef NDEBUG
+        glClearColor(0.0, 0.0, 0.0, 0.0f);
+#else
+        // clear the screen -- the color is a little brighter just for debugging
+        glClearColor(0.05, 255.f, 0.05, 255.0f);
+#endif
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 

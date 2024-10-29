@@ -2,7 +2,7 @@
 // Created by ozzadar on 2024-10-12.
 //
 
-#include "windows/window.h"
+#include "windows/win_glfw.h"
 #include "input/glfw_keys.h"
 
 #include <imgui_impl_glfw.h>
@@ -11,18 +11,16 @@
 #include <GLFW/glfw3.h>
 
 namespace OZZ {
-    Window::Window(WindowParams &&InParams) : Params(std::move(InParams)) {
-        spdlog::info("Creating window with key {}", Params.key);
+    WinGLFW::WinGLFW(WindowParams &&InParams) : Params(std::move(InParams)) {
+        spdlog::info("Creating GLFW window with title: {} | and key: {}", Params.Title, Params.Key);
         Initialize();
     }
 
-    Window::~Window() {
+    WinGLFW::~WinGLFW() {
         Shutdown();
     }
 
-    bool Window::Update() {
-        MakeContextCurrent();
-
+    bool WinGLFW::Update() {
         if (glfwWindowShouldClose(pWindow)) {
             return true;
         }
@@ -41,7 +39,7 @@ namespace OZZ {
         return false;
     }
 
-    void Window::Initialize() {
+    void WinGLFW::Initialize() {
         Input = std::make_unique<InputSubsystem>();
 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, Params.OpenGLVersion.first);
@@ -50,10 +48,28 @@ namespace OZZ {
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
         // window hints
-        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, Params.bTransparentFramebuffer ? GLFW_TRUE : GLFW_FALSE);
-        glfwWindowHint(GLFW_FLOATING, Params.bAlwaysOnTop ? GLFW_TRUE : GLFW_FALSE);
-        glfwWindowHint(GLFW_DECORATED, Params.bDecorated ? GLFW_TRUE : GLFW_FALSE);
-        glfwWindowHint(GLFW_MOUSE_PASSTHROUGH, Params.bInputPassthrough ? GLFW_TRUE : GLFW_FALSE);
+        // apply window styles
+        for (const auto Style : Params.Styles) {
+            switch (Style) {
+                case EWindowStyle::Resizable:
+                    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+                    break;
+                case EWindowStyle::TransparentFramebuffer:
+                    glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
+                    break;
+                case EWindowStyle::AlwaysOnTop:
+                    glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
+                    break;
+                case EWindowStyle::Decorated:
+                    glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+                    break;
+                case EWindowStyle::InputPassthrough:
+                    glfwWindowHint(GLFW_MOUSE_PASSTHROUGH, GLFW_TRUE);
+                    break;
+                default:
+                    break;
+            }
+        }
 
         GLFWmonitor *pMonitor = nullptr;
         if (Params.Mode == EWindowMode::Fullscreen || Params.Mode == EWindowMode::Borderless) {
@@ -70,18 +86,19 @@ namespace OZZ {
             }
         }
 
-        pWindow = glfwCreateWindow(Params.Width, Params.Height, Params.Title.c_str(), pMonitor, nullptr);
+        pWindow = glfwCreateWindow(Params.Size.x, Params.Size.y, Params.Title.c_str(), pMonitor, nullptr);
         if (!pWindow) {
-            spdlog::error("Failed to create window | Key: {}", Params.key);
+            spdlog::error("Failed to create window | Key: {}", Params.Key);
             glfwTerminate();
             return;
         }
         SetUserPointer(this);
 
-        // Set Window
+        // Set Windoe
         glfwSetKeyCallback(pWindow, [](GLFWwindow *Window, int Key, int Scancode, int Action, int Mods) {
-           auto App = static_cast<OZZ::Window *>(glfwGetWindowUserPointer(Window));
+           auto App = static_cast<OZZ::WinGLFW *>(glfwGetWindowUserPointer(Window));
            try {
+               spdlog::info("Key: {}, Action: {}", Key, Action);
                if (App->Input) {
                    if (Action == GLFW_REPEAT) return; // Repeat is not needed.
                    GLFWKeyState glfwKeyState(Action);
@@ -93,7 +110,7 @@ namespace OZZ {
        });
 
         glfwSetMouseButtonCallback(pWindow, [](GLFWwindow *Window, int Button, int Action, int Mods) {
-            auto App = static_cast<OZZ::Window *>(glfwGetWindowUserPointer(Window));
+            auto App = static_cast<OZZ::WinGLFW *>(glfwGetWindowUserPointer(Window));
 
             try {
                 if (App->Input) {
@@ -107,7 +124,7 @@ namespace OZZ {
         MakeContextCurrent();
 
         // start glad
-        if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+        if (!gladLoadGL((GLADloadfunc) glfwGetProcAddress)) {
             spdlog::error("Failed to initialize GLAD");
             glfwTerminate();
             return;
@@ -135,15 +152,15 @@ namespace OZZ {
         glDepthFunc(GL_LESS);
     }
 
-    void Window::MakeContextCurrent() const {
+    void WinGLFW::MakeContextCurrent() const {
         if (pWindow) {
             glfwMakeContextCurrent(pWindow);
         }
     }
 
 
-    void Window::Shutdown() {
-        spdlog::info("Shutting down window with key {}", Params.key);
+    void WinGLFW::Shutdown() {
+        spdlog::info("Shutting down window with key {}", Params.Key);
         if (Params.bEnableImGUI) {
             ImGui_ImplOpenGL3_Shutdown();
             ImGui_ImplGlfw_Shutdown();
@@ -158,20 +175,21 @@ namespace OZZ {
         }
     }
 
-    void Window::SetWindowPosition(const glm::vec2 &Position) const {
+    void WinGLFW::SetWindowPosition(const glm::ivec2 &Position) const {
         if (pWindow) {
             glfwSetWindowPos(pWindow, Position.x, Position.y);
         }
     }
 
-    void Window::SetUserPointer(void *Pointer) {
+    void WinGLFW::SetUserPointer(void *Pointer) {
         if (pWindow) {
             UserPointer = Pointer;
             glfwSetWindowUserPointer(pWindow, Pointer);
         }
     }
 
-    void Window::FrameStart() {
+    void WinGLFW::FrameStart() {
+        MakeContextCurrent();
         if (Params.bEnableImGUI) {
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
@@ -179,7 +197,7 @@ namespace OZZ {
         }
     }
 
-    void Window::FrameEnd() {
+    void WinGLFW::FrameEnd() {
         if (Params.bEnableImGUI) {
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
